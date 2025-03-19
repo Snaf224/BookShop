@@ -1,0 +1,107 @@
+﻿@page "/orders/edit"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Редактировать заказ</PageTitle>
+
+<h1>Редактировать заказ</h1>
+
+<hr />
+@if (order is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="order" OnValidSubmit="UpdateOrder" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="order.OrderId" value="@order.OrderId" />
+
+                <div class="mb-3">
+                    <label for="orderName" class="form-label">Название заказа:</label>
+                    <InputText id="orderName" @bind-Value="order.OrderName" class="form-control" />
+                    <ValidationMessage For="() => order.OrderName" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="orderDate" class="form-label">Дата заказа:</label>
+                    <InputDate id="orderDate" @bind-Value="order.OrderDate" class="form-control" />
+                    <ValidationMessage For="() => order.OrderDate" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="paymentMethod" class="form-label">Метод оплаты:</label>
+                    <InputText id="paymentMethod" @bind-Value="order.PaymentMethod" class="form-control" />
+                    <ValidationMessage For="() => order.PaymentMethod" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="customerId" class="form-label">Покупатель:</label>
+                    <InputNumber id="customerId" @bind-Value="order.CustomerId" class="form-control" />
+                    <ValidationMessage For="() => order.CustomerId" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/orders">Возврат к списку заказов</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int OrderId { get; set; }
+
+    [SupplyParameterFromForm]
+    public Order? order { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        order ??= await context.Orders.FirstOrDefaultAsync(o => o.OrderId == OrderId);
+
+        if (order is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    public async Task UpdateOrder()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(order!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!OrderExists(order!.OrderId))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/orders");
+    }
+
+    bool OrderExists(int orderId)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Orders.Any(e => e.OrderId == orderId);
+    }
+}

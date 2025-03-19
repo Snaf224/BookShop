@@ -1,0 +1,57 @@
+﻿@page "/books/details"
+
+
+@using Microsoft.EntityFrameworkCore;
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Просмотр книги</PageTitle>
+
+<h1>Просмотр книги</h1>
+
+<div>
+    <hr />
+    @if (book is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-2">Название</dt>
+            <dd class="col-sm-10">@book.Title</dd>
+            <dt class="col-sm-2">Цена</dt>
+            <dd class="col-sm-10">@book.Price</dd>
+            <dt class="col-sm-2">Книг в наличии</dt>
+            <dd class="col-sm-10">@book.CountBooks</dd>
+            <dt class="col-sm-2">Описание</dt>
+            <dd class="col-sm-10">@book.Description</dd>
+            <dt class="col-sm-2">Код автора</dt>
+            <dd class="col-sm-10">@book.AuthorId</dd>
+           
+        </dl>
+        <div>
+            <a href="@($"/books/edit?bookid={book.BookId}")">Редактировать</a> |
+            <a href="@($"/books")">Возврат к списку книг</a>
+        </div>
+    }
+</div>
+
+@code {
+    Book? book;
+
+    [SupplyParameterFromQuery]
+    public int BookId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        book = await context.Books.FirstOrDefaultAsync(m => m.BookId == BookId);
+
+        if (book is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

@@ -1,0 +1,147 @@
+﻿@page "/exportexcel"
+
+@attribute [Authorize(Roles = "admin")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+
+@rendermode InteractiveServer
+@attribute [StreamRendering]
+@using ClosedXML.Excel
+@using Microsoft.EntityFrameworkCore;
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@implements IAsyncDisposable
+
+@inject IJSRuntime js
+
+<button type="button" class="btn btn-success mb-2" @onclick="@ExportXLS">Экспорт данных в Excel</button>
+
+@code {
+
+    BooksDbContext context = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async Task ExportXLS()
+    {
+        var XLSStream = ExportXLSResult();
+
+        await js.InvokeVoidAsync("BlazorDownloadFile", "Books shop.xlsx", XLSStream);
+    }
+
+    private byte[] ExportXLSResult()
+    {
+        using var workbook = new XLWorkbook();
+
+        // Лист для авторов
+        var worksheet1 = workbook.Worksheets.Add("Authors");
+        worksheet1.Cell(1, 1).Value = "AuthorId";
+        worksheet1.Cell(1, 2).Value = "Fio";
+        worksheet1.Cell(1, 3).Value = "Bio";
+        worksheet1.Cell(1, 4).Value = "Country";
+        worksheet1.Cell(1, 5).Value = "DateOfBirth";
+        worksheet1.Row(1).Style.Font.Bold = true;
+
+        int i = 2;
+        foreach (var author in context.Authors)
+        {
+            worksheet1.Cell(i, 1).Value = author.AuthorId;
+            worksheet1.Cell(i, 2).Value = author.Fio;
+            worksheet1.Cell(i, 3).Value = author.Bio;
+            worksheet1.Cell(i, 4).Value = author.Country;
+            worksheet1.Cell(i, 5).Value = author.DateOfBirth;
+            i++;
+        }
+
+        // Лист для книг
+        var worksheet2 = workbook.Worksheets.Add("Books");
+        worksheet2.Cell(1, 1).Value = "BookId";
+        worksheet2.Cell(1, 2).Value = "Title";
+        worksheet2.Cell(1, 3).Value = "Price";
+        worksheet2.Cell(1, 4).Value = "CountBooks";
+        worksheet2.Cell(1, 5).Value = "Description";
+        worksheet2.Cell(1, 6).Value = "AuthorId";
+        worksheet2.Row(1).Style.Font.Bold = true;
+
+        i = 2;
+        foreach (var book in context.Books)
+        {
+            worksheet2.Cell(i, 1).Value = book.BookId;
+            worksheet2.Cell(i, 2).Value = book.Title;
+            worksheet2.Cell(i, 3).Value = book.Price;
+            worksheet2.Cell(i, 4).Value = book.CountBooks;
+            worksheet2.Cell(i, 5).Value = book.Description;
+            worksheet2.Cell(i, 6).Value = book.AuthorId;
+            i++;
+        }
+
+        // Лист для клиентов
+        var worksheet3 = workbook.Worksheets.Add("Customers");
+        worksheet3.Cell(1, 1).Value = "CustomerId";
+        worksheet3.Cell(1, 2).Value = "FullName";
+        worksheet3.Cell(1, 3).Value = "Email";
+        worksheet3.Cell(1, 4).Value = "ShippingAddress";
+        worksheet3.Cell(1, 5).Value = "PhoneNumber";
+        worksheet3.Row(1).Style.Font.Bold = true;
+
+        i = 2;
+        foreach (var customer in context.Customers)
+        {
+            worksheet3.Cell(i, 1).Value = customer.CustomerId;
+            worksheet3.Cell(i, 2).Value = customer.FullName;
+            worksheet3.Cell(i, 3).Value = customer.Email;
+            worksheet3.Cell(i, 4).Value = customer.ShippingAddress;
+            worksheet3.Cell(i, 5).Value = customer.PhoneNumber;
+            i++;
+        }
+
+        // Лист для заказов
+        var worksheet4 = workbook.Worksheets.Add("Orders");
+        worksheet4.Cell(1, 1).Value = "OrderId";
+        worksheet4.Cell(1, 2).Value = "OrderName";
+        worksheet4.Cell(1, 3).Value = "OrderDate";
+        worksheet4.Cell(1, 4).Value = "PaymentMethod";
+        worksheet4.Cell(1, 5).Value = "CustomerId";
+        worksheet4.Row(1).Style.Font.Bold = true;
+
+        i = 2;
+        foreach (var order in context.Orders)
+        {
+            worksheet4.Cell(i, 1).Value = order.OrderId;
+            worksheet4.Cell(i, 2).Value = order.OrderName;
+            worksheet4.Cell(i, 3).Value = order.OrderDate;
+            worksheet4.Cell(i, 4).Value = order.PaymentMethod;
+            worksheet4.Cell(i, 5).Value = order.CustomerId;
+            i++;
+        }
+
+        // Лист для статусов заказа
+        var worksheet5 = workbook.Worksheets.Add("OrderStatuses");
+        worksheet5.Cell(1, 1).Value = "StatusId";
+        worksheet5.Cell(1, 2).Value = "Status";
+        worksheet5.Cell(1, 3).Value = "DateUpdated";
+        worksheet5.Cell(1, 4).Value = "TrackingNumber";
+        worksheet5.Cell(1, 5).Value = "OrderId";
+        worksheet5.Row(1).Style.Font.Bold = true;
+
+        i = 2;
+        foreach (var status in context.OrderStatuses)
+        {
+            worksheet5.Cell(i, 1).Value = status.StatusId;
+            worksheet5.Cell(i, 2).Value = status.Status;
+            worksheet5.Cell(i, 3).Value = status.DateUpdated;
+            worksheet5.Cell(i, 4).Value = status.TrackingNumber;
+            worksheet5.Cell(i, 5).Value = status.OrderId;
+            i++;
+        }
+
+        using var XLSStream = new MemoryStream();
+        workbook.SaveAs(XLSStream);
+        return XLSStream.ToArray();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

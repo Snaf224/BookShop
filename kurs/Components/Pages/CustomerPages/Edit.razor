@@ -1,0 +1,106 @@
+﻿@page "/customers/edit"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Редактировать клиента</PageTitle>
+
+<h1>Редактировать клиента</h1>
+
+<hr />
+@if (customer is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="customer" OnValidSubmit="UpdateCustomer" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="customer.CustomerId" value="@customer.CustomerId" />
+
+                <div class="mb-3">
+                    <label for="fullName" class="form-label">ФИО клиента:</label>
+                    <InputText id="fullName" @bind-Value="customer.FullName" class="form-control" />
+                    <ValidationMessage For="() => customer.FullName" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email:</label>
+                    <InputText id="email" @bind-Value="customer.Email" class="form-control" />
+                    <ValidationMessage For="() => customer.Email" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="shippingAddress" class="form-label">Адрес доставки:</label>
+                    <InputText id="shippingAddress" @bind-Value="customer.ShippingAddress" class="form-control" />
+                    <ValidationMessage For="() => customer.ShippingAddress" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="phoneNumber" class="form-label">Телефон:</label>
+                    <InputText id="phoneNumber" @bind-Value="customer.PhoneNumber" class="form-control" />
+                    <ValidationMessage For="() => customer.PhoneNumber" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/customers">Возврат к списку клиентов</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int CustomerId { get; set; }
+
+    public Customer? customer { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        customer ??= await context.Customers.FirstOrDefaultAsync(m => m.CustomerId == CustomerId);
+
+        if (customer is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    public async Task UpdateCustomer()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(customer!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!CustomerExists(customer!.CustomerId))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/customers");
+    }
+
+    bool CustomerExists(int customerId)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Customers.Any(e => e.CustomerId == customerId);
+    }
+}

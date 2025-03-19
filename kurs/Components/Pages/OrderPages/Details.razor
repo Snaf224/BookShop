@@ -1,0 +1,55 @@
+﻿@page "/orders/details"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Просмотр заказа</PageTitle>
+
+<h1>Просмотр заказа</h1>
+
+<div>
+    <hr />
+    @if (order is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-2">Название заказа</dt>
+            <dd class="col-sm-10">@order.OrderName</dd>
+            <dt class="col-sm-2">Дата заказа</dt>
+            <dd class="col-sm-10">@order.OrderDate.ToShortDateString()</dd>
+            <dt class="col-sm-2">Метод оплаты</dt>
+            <dd class="col-sm-10">@order.PaymentMethod</dd>
+            <dt class="col-sm-2">Покупатель</dt>
+            <dd class="col-sm-10">@order.Customer?.FullName</dd> <!-- Показываем имя покупателя -->
+        </dl>
+        <div>
+            <a href="@($"/orders/edit?orderid={order.OrderId}")">Редактировать</a> |
+            <a href="@($"/orders")">Возврат к списку заказов</a>
+        </div>
+    }
+</div>
+
+@code {
+    Order? order;
+
+    [SupplyParameterFromQuery]
+    public int OrderId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        order = await context.Orders
+            .Include(o => o.Customer) // Включаем покупателя для отображения
+            .FirstOrDefaultAsync(m => m.OrderId == OrderId);
+
+        if (order is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

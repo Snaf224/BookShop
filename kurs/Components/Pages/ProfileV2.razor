@@ -1,0 +1,322 @@
+﻿@* @page "/profile2"
+
+@using System.ComponentModel.DataAnnotations
+@using kurs.Models
+@inject BooksDbContext dbContext
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Профиль</PageTitle>
+
+<h3>Профиль</h3>
+<StatusMessage />
+
+<EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" method="post" FormName="profileForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary class="text-danger" />
+
+    <div class="form-floating mb-3">
+        <input type="text" @bind="Input.FullName" class="form-control" placeholder="Полное имя" />
+        <label for="fullName" class="form-label">Полное имя</label>
+        <ValidationMessage For="() => Input.FullName" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label for="email" class="form-label">Электронная почта:</label>
+        <InputText id="email" @bind-Value="Input.Email" class="form-control" />
+        <ValidationMessage For="() => Input.Email" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label for="shippingAddress" class="form-label">Адрес доставки:</label>
+        <InputText id="shippingAddress" @bind-Value="Input.ShippingAddress" class="form-control" />
+        <ValidationMessage For="() => Input.ShippingAddress" class="text-danger" />
+    </div>
+
+    <div class="mb-3">
+        <label for="phoneNumber" class="form-label">Номер телефона:</label>
+        <InputText id="phoneNumber" @bind-Value="Input.PhoneNumber" class="form-control" />
+        <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+    </div>
+
+    <button type="submit" class="w-50 btn btn-lg btn-primary">Сохранить</button>
+</EditForm>
+
+@code {
+    private Customer Customer { get; set; }
+    private InputModel Input { get; set; } = new();
+
+    [Parameter] public int CustomerId { get; set; } // ID клиента передается через параметры
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Загрузите данные клиента из базы данных по ID
+        Customer = await dbContext.Customers.FirstOrDefaultAsync(c => c.CustomerId == CustomerId);
+
+        if (Customer != null)
+        {
+            // Синхронизируем данные с моделью Input
+            Input.FullName = Customer.FullName;
+            Input.Email = Customer.Email;
+            Input.ShippingAddress = Customer.ShippingAddress;
+            Input.PhoneNumber = Customer.PhoneNumber;
+        }
+        else
+        {
+            // Обработка случая, если клиент не найден
+            // Можно добавить редирект или показать ошибку
+        }
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        if (Customer != null)
+        {
+            // Обновление данных клиента из формы
+            Customer.FullName = Input.FullName;
+            Customer.Email = Input.Email;
+            Customer.ShippingAddress = Input.ShippingAddress;
+            Customer.PhoneNumber = Input.PhoneNumber;
+
+            // Обновление записи в базе данных
+            dbContext.Customers.Update(Customer);
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    private class InputModel
+    {
+        [Required(ErrorMessage = "Полное имя обязательно для заполнения.")]
+        [Display(Name = "Полное имя")]
+        public string FullName { get; set; }
+
+        [Required(ErrorMessage = "Электронная почта обязательна.")]
+        [EmailAddress(ErrorMessage = "Некорректный формат электронной почты.")]
+        [Display(Name = "Электронная почта")]
+        public string Email { get; set; }
+
+        [Required(ErrorMessage = "Адрес доставки обязателен.")]
+        [Display(Name = "Адрес доставки")]
+        public string ShippingAddress { get; set; }
+
+        [Required(ErrorMessage = "Номер телефона обязателен.")]
+        [Phone(ErrorMessage = "Некорректный формат номера телефона.")]
+        [Display(Name = "Номер телефона")]
+        public string PhoneNumber { get; set; }
+    }
+}
+ *@
+@page "/profile2"
+@using System.ComponentModel.DataAnnotations
+@using kurs.Models
+@inject BooksDbContext dbContext
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Профиль</PageTitle>
+
+<h3>Профиль</h3>
+
+<EditForm Model="Input" OnValidSubmit="OnSubmitAsync" FormName="ProfileForm" method="post">
+    <div class="form-floating mb-3">
+        <input type="text" @bind="Input.FullName" class="form-control" placeholder="Полное имя" />
+        <label>Полное имя</label>
+    </div>
+
+    <div class="mb-3">
+        <label>Электронная почта:</label>
+        <InputText @bind-Value="Input.Email" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label>Адрес доставки:</label>
+        <InputText @bind-Value="Input.ShippingAddress" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label>Номер телефона:</label>
+        <InputText @bind-Value="Input.PhoneNumber" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+</EditForm>
+
+@code {
+    private Customer Customer { get; set; }
+    private InputModel Input { get; set; } = new();
+
+    [Parameter] public int CustomerId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomerDataAsync();
+    }
+
+    private async Task LoadCustomerDataAsync()
+    {
+        // Загружаем данные клиента из базы данных
+        
+        Customer = await dbContext.Customers.FirstOrDefaultAsync(c => c.CustomerId == 1); // вместо кастомерИД можно ставить 1, выгрузятся данные по этому айдишнику в поля
+
+        if (Customer != null)
+        {
+            // Синхронизируем данные модели Input
+            Input.FullName = Customer.FullName;
+            Input.Email = Customer.Email;
+            Input.ShippingAddress = Customer.ShippingAddress;
+            Input.PhoneNumber = Customer.PhoneNumber;
+        }
+    }
+
+    private async Task OnSubmitAsync()
+    {
+        if (Customer != null)
+        {
+            // Обновление данных клиента из формы
+            Customer.FullName = Input.FullName;
+            Customer.Email = Input.Email;
+            Customer.ShippingAddress = Input.ShippingAddress;
+            Customer.PhoneNumber = Input.PhoneNumber;
+
+            // Сохраняем изменения в базе данных
+            dbContext.Customers.Update(Customer);
+            await dbContext.SaveChangesAsync();
+
+            // Повторно загружаем данные для обновления UI
+            await LoadCustomerDataAsync();
+        }
+    }
+
+    private class InputModel
+    {
+        public string FullName { get; set; }
+        public string Email { get; set; }
+        public string ShippingAddress { get; set; }
+        public string PhoneNumber { get; set; }
+    }
+}
+
+@* @page "/profile2"
+@using System.ComponentModel.DataAnnotations
+@using kurs.Models
+@inject BooksDbContext dbContext
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Профиль</PageTitle>
+
+<h3>Профиль</h3>
+
+<!-- Выпадающий список для выбора клиента -->
+<div class="mb-3">
+    <label for="customerSelect">Выберите клиента:</label>
+    <select id="customerSelect" @bind="SelectedCustomerId" class="form-control" @onchange=">
+        <option value="">Выберите клиента</option>
+        @foreach (var customer in Customers)
+        {
+            <option value="@customer.CustomerId">@customer.FullName</option>
+        }
+    </select>
+</div>
+
+@if (Customer != null)
+{
+    <EditForm Model="Input" OnValidSubmit="OnSubmitAsync" FormName="ProfileForm" Method="post">
+        <div class="form-floating mb-3">
+            <input type="text" @bind="Input.FullName" class="form-control" placeholder="Полное имя" />
+            <label>Полное имя</label>
+        </div>
+
+        <div class="mb-3">
+            <label>Электронная почта:</label>
+            <InputText @bind-Value="Input.Email" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Адрес доставки:</label>
+            <InputText @bind-Value="Input.ShippingAddress" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Номер телефона:</label>
+            <InputText @bind-Value="Input.PhoneNumber" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+    </EditForm>
+}
+else
+{
+    <p>Выберите клиента для просмотра данных.</p>
+}
+
+@code {
+    private Customer Customer { get; set; }
+    private InputModel Input { get; set; } = new();
+    private List<Customer> Customers { get; set; } = new(); // Список всех клиентов
+    private int SelectedCustomerId { get; set; } // ID выбранного клиента
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAllCustomersAsync(); // Загружаем всех клиентов
+    }
+
+    private async Task LoadAllCustomersAsync()
+    {
+        // Загружаем всех клиентов для выпадающего списка
+        Customers = await dbContext.Customers.ToListAsync();
+    }
+
+    private async Task LoadCustomerDataAsync(int customerId)
+    {
+        // Загружаем данные выбранного клиента из базы данных
+        Customer = await dbContext.Customers.FirstOrDefaultAsync(c => c.CustomerId == customerId);
+
+        if (Customer != null)
+        {
+            // Синхронизируем данные модели Input
+            Input.FullName = Customer.FullName;
+            Input.Email = Customer.Email;
+            Input.ShippingAddress = Customer.ShippingAddress;
+            Input.PhoneNumber = Customer.PhoneNumber;
+        }
+    }
+
+    private async Task OnCustomerChange(ChangeEventArgs e)
+    {
+        // При изменении выбранного клиента загружаем его данные
+        if (int.TryParse(e.Value.ToString(), out var customerId))
+        {
+            await LoadCustomerDataAsync(customerId);
+        }
+        else
+        {
+            Customer = null; // Если выбран пустой элемент, очищаем данные
+        }
+    }
+
+    private async Task OnSubmitAsync()
+    {
+        if (Customer != null)
+        {
+            // Обновление данных клиента из формы
+            Customer.FullName = Input.FullName;
+            Customer.Email = Input.Email;
+            Customer.ShippingAddress = Input.ShippingAddress;
+            Customer.PhoneNumber = Input.PhoneNumber;
+
+            // Сохраняем изменения в базе данных
+            dbContext.Customers.Update(Customer);
+            await dbContext.SaveChangesAsync();
+
+            // Повторно загружаем данные для обновления UI
+            await LoadCustomerDataAsync(Customer.CustomerId);
+        }
+    }
+
+    private class InputModel
+    {
+        public string FullName { get; set; }
+        public string Email { get; set; }
+        public string ShippingAddress { get; set; }
+        public string PhoneNumber { get; set; }
+    }
+}
+ *@

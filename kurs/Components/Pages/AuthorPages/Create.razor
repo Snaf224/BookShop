@@ -1,0 +1,63 @@
+﻿@page "/authors/create"
+
+@using Microsoft.EntityFrameworkCore;
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Добавить нового автора</PageTitle>
+
+<h1>Добавить нового автора</h1>
+<hr />
+
+<div class="row">
+    <div class="col-md-6">
+        <EditForm method="post" Model="Author" OnValidSubmit="AddAuthor" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="fio" class="form-label">ФИО автора:</label>
+                <InputText id="fio" @bind-Value="Author.Fio" class="form-control" />
+                <ValidationMessage For="() => Author.Fio" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="bio" class="form-label">Биография:</label>
+                <InputTextArea id="bio" @bind-Value="Author.Bio" class="form-control" />
+                <ValidationMessage For="() => Author.Bio" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="country" class="form-label">Страна:</label>
+                <InputText id="country" @bind-Value="Author.Country" class="form-control" />
+                <ValidationMessage For="() => Author.Country" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="dob" class="form-label">Дата рождения:</label>
+                <InputDate id="dob" @bind-Value="Author.DateOfBirth" class="form-control" />
+                <ValidationMessage For="() => Author.DateOfBirth" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Создать автора</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/authors">Возврат к списку авторов</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Author Author { get; set; } = new();
+
+    private async Task AddAuthor()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Authors.Add(Author);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/authors");
+    }
+}

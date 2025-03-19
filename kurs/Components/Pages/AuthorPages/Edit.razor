@@ -1,0 +1,102 @@
+﻿@page "/authors/edit"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Редактировать автора</PageTitle>
+
+<h1>Редактировать автора</h1>
+
+<hr />
+@if (author is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="author" OnValidSubmit="UpdateAuthor" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="author.AuthorId" value="@author.AuthorId" />
+                <div class="mb-3">
+                    <label for="authorname" class="form-label">Фио автора:</label>
+                    <InputText id="authorname" @bind-Value="author.Fio" class="form-control" />
+                    <ValidationMessage For="() => author.Fio" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="authorbio" class="form-label">Биография автора:</label>
+                    <InputTextArea id="authorbio" @bind-Value="author.Bio" class="form-control" />
+                    <ValidationMessage For="() => author.Bio" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="authorCountry" class="form-label">Страна:</label>
+                    <InputText id="authorCountry" @bind-Value="author.Country" class="form-control" />
+                    <ValidationMessage For="() => author.Country" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="authorDob" class="form-label">Дата рождения:</label>
+                    <InputDate id="authorDob" @bind-Value="author.DateOfBirth" class="form-control" />
+                    <ValidationMessage For="() => author.DateOfBirth" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/authors">Возврат к списку авторов</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int AuthorId { get; set; }
+
+    [SupplyParameterFromForm]
+    public Author? author { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        author ??= await context.Authors.FirstOrDefaultAsync(a => a.AuthorId == AuthorId);
+
+        if (author is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    public async Task UpdateAuthor()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(author!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!AuthorExists(author!.AuthorId))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/authors");
+    }
+
+    bool AuthorExists(int authorId)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Authors.Any(e => e.AuthorId == authorId);
+    }
+}

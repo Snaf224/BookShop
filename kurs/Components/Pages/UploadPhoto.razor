@@ -1,0 +1,260 @@
+﻿@* @page "/profile3"
+@using System.ComponentModel.DataAnnotations
+@using kurs.Models
+@inject IJSRuntime JSRuntime
+
+<EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="ProfileForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="Name">Name:</label>
+        <InputText id="Name" class="form-control" @bind-Value="Input.Name" />
+    </div>
+    <div class="form-group">
+        <label for="Phone">Phone:</label>
+        <InputText id="Phone" class="form-control" @bind-Value="Input.Phone" />
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</EditForm>
+
+@code {
+    private string? errorMessage;
+
+    // Модель для данных формы
+    private ProfileInput Input = new ProfileInput();
+
+    // Этот метод будет вызван после рендеринга компонента, безопасно для вызовов JS interop
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Загружаем данные из localStorage только при первом рендере
+            Input.Name = await JSRuntime.InvokeAsync<string>("localStorageHelper.getItem", "Name") ?? "Иван Иванов";
+            Input.Phone = await JSRuntime.InvokeAsync<string>("localStorageHelper.getItem", "Phone") ?? "+79123456789";
+        }
+    }
+
+    // Этот метод будет вызван при успешной отправке формы
+    private async Task OnValidSubmitAsync()
+    {
+        try
+        {
+            // Сохраняем данные в localStorage
+            await JSRuntime.InvokeVoidAsync("localStorageHelper.setItem", "Name", Input.Name);
+            await JSRuntime.InvokeVoidAsync("localStorageHelper.setItem", "Phone", Input.Phone);
+
+            // Успешное завершение
+            errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            // Если произошла ошибка, выводим сообщение
+            errorMessage = $"Произошла ошибка: {ex.Message}";
+        }
+    }
+
+    // Модель для данных профиля
+    public class ProfileInput
+    {
+        public string Name { get; set; }
+        public string Phone { get; set; }
+    }
+}
+ *@
+
+@* @page "/profile3"
+@using kurs.Models
+@inject BooksDbContext _dbContext
+@using Microsoft.EntityFrameworkCore
+
+<EditForm Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="ProfileForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="Name">Name:</label>
+        <InputText id="Name" class="form-control" @bind-Value="Input.Name" />
+    </div>
+    <div class="form-group">
+        <label for="Phone">Phone:</label>
+        <InputText id="Phone" class="form-control" @bind-Value="Input.Phone" />
+    </div>
+    <div class="form-group">
+        <label for="Photo">Upload Photo:</label>
+        <InputFile id="Photo" OnChange="OnFileSelected" />
+        @if (Input.ImagePreview != null)
+        {
+            <div class="mt-3">
+                <img src="@Input.ImagePreview" alt="Profile Photo" class="img-thumbnail" style="max-width: 500px;" />
+                <button type="button" class="btn btn-danger mt-2" @onclick="RemoveImage">Remove Photo</button>
+            </div>
+        }
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@code {
+    private string? errorMessage;
+
+    // Модель для данных формы
+    private ProfileInput Input = new ProfileInput();
+
+    // Загружаем данные из базы данных
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var profile = await _dbContext.Profiles.FirstOrDefaultAsync();
+            if (profile != null)
+            {
+                Input.ProfileID = profile.ProfileID;
+                Input.Name = profile.Name;
+                Input.Phone = profile.Phone;
+
+                if (profile.Image != null)
+                {
+                    Input.ImagePreview = $"data:image/jpg;base64,{Convert.ToBase64String(profile.Image)}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading profile data: {ex.Message}";
+        }
+    }
+
+    // Сохранение данных профиля
+    private async Task OnValidSubmitAsync()
+    {
+        try
+        {
+            var profile = await _dbContext.Profiles.FirstOrDefaultAsync();
+            if (profile == null)
+            {
+                profile = new kurs.Models.Profile();
+            }
+
+            profile.Name = Input.Name;
+            profile.Phone = Input.Phone;
+
+            if (!string.IsNullOrEmpty(Input.ImagePreview))
+            {
+                var base64Data = Input.ImagePreview.Split(',')[1];
+                profile.Image = Convert.FromBase64String(base64Data);
+            }
+
+            if (profile.ProfileID == 2)
+                _dbContext.Profiles.Add(profile);
+            else
+                _dbContext.Profiles.Update(profile);
+
+            await _dbContext.SaveChangesAsync();
+
+            errorMessage = null; // Успешное завершение
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving profile data: {ex.Message}";
+        }
+    }
+
+    // Обработка загруженного файла
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            var buffer = new byte[file.Size];
+            await file.OpenReadStream().ReadAsync(buffer);
+
+            // Отображение изображения на странице как base64 строка
+            Input.ImagePreview = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+        }
+    }
+
+    // Удаление изображения
+    private void RemoveImage()
+    {
+        Input.ImagePreview = null;
+    }
+
+    // Модель для данных формы
+    public class ProfileInput
+    {
+        public int ProfileID { get; set; }
+        public string? Name { get; set; }
+        public string? Phone { get; set; }
+        public string? ImagePreview { get; set; }
+    }
+}
+ *@
+@page "/UploadPhoto"
+@rendermode InteractiveServer
+
+@inject IWebHostEnvironment Environment
+@inject ILogger<Index> Logger
+
+<PageTitle>Загрузка фотографии</PageTitle>
+
+<h3>Загрузка фото</h3>
+
+@if (isLoading)
+{
+    <p class="text-info">Uploading...</p>
+}
+else
+{
+    <div class="form-group mb-3">
+        <label for="Avatar">Текущий аватар</label><br />
+        <img src="@avatarPath" alt="Фотография пользователя" width="240" height="240" /><br />
+        <InputFile OnChange="HandleAvatarUpload" accept=".jpeg, .jpg, .png" />
+    </div>
+}
+<button class="btn btn-lg btn-primary" @onclick="SaveAvatar">Сохранить фотографию</button>
+
+@code {
+    private bool isLoading;
+    private string avatarPath = "media/default_avatar.png"; // Путь по умолчанию
+    private long maxFileSize = 1024 * 1024 * 2; // Максимальный размер файла: 2 МБ
+
+    private async Task HandleAvatarUpload(InputFileChangeEventArgs e)
+    {
+        isLoading = true;
+
+        try
+        {
+            var file = e.File;
+            var uniqueFileName = $"user_avatar_{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+            var savePath = Path.Combine(Environment.WebRootPath, "media", uniqueFileName);
+
+            Directory.CreateDirectory(Path.GetDirectoryName(savePath)!);
+
+            await using FileStream fs = new(savePath, FileMode.Create);
+            await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
+
+            avatarPath = $"media/{uniqueFileName}"; // Относительный путь для отображения
+            Logger.LogInformation("Avatar uploaded and saved as: {Path}", savePath);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Error uploading avatar: {Message}", ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private Task SaveAvatar()
+    {
+        
+        Logger.LogInformation("Avatar saved at: {Path}", avatarPath);
+        return Task.CompletedTask;
+    }
+}

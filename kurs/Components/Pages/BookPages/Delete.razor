@@ -1,0 +1,66 @@
+﻿@page "/books/delete"
+
+
+@using Microsoft.EntityFrameworkCore;
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Удалить книгу</PageTitle>
+
+<h1>Удалить книгу</h1>
+
+<h3>Вы уверены, что хотите удалить книгу?</h3>
+<div>
+    <hr />
+    @if (book is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-2">Название</dt>
+            <dd class="col-sm-10">@book.Title</dd>
+            <dt class="col-sm-2">Цена</dt>
+            <dd class="col-sm-10">@book.Price</dd>
+            <dt class="col-sm-2">Книг в наличии</dt>
+            <dd class="col-sm-10">@book.CountBooks</dd>
+            <dt class="col-sm-2">Описание</dt>
+            <dd class="col-sm-10">@book.Description</dd>
+            <dt class="col-sm-2">Код автора</dt>
+            <dd class="col-sm-10">@book.AuthorId</dd>
+            
+        </dl>
+        <EditForm method="post" Model="book" OnValidSubmit="DeleteBook" FormName="delete">
+            <button type="submit" class="btn btn-danger" disabled="@(book is null)">Удалить</button> |
+            <a href="/books">Возврат к списку книг</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    Book? book;
+
+    [SupplyParameterFromQuery]
+    public int BookId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        book = await context.Books.FirstOrDefaultAsync(m => m.BookId == BookId);
+
+        if (book is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    public async Task DeleteBook()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Books.Remove(book!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/books");
+    }
+}

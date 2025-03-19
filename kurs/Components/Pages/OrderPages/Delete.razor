@@ -1,0 +1,65 @@
+﻿@page "/orders/delete"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Удалить заказ</PageTitle>
+
+<h1>Удалить заказ</h1>
+
+<h3>Вы уверены, что хотите удалить заказ?</h3>
+<div>
+    <hr />
+    @if (order is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-2">Название заказа</dt>
+            <dd class="col-sm-10">@order.OrderName</dd>
+            <dt class="col-sm-2">Дата заказа</dt>
+            <dd class="col-sm-10">@order.OrderDate.ToShortDateString()</dd>
+            <dt class="col-sm-2">Метод оплаты</dt>
+            <dd class="col-sm-10">@order.PaymentMethod</dd>
+            <dt class="col-sm-2">Покупатель</dt>
+            <dd class="col-sm-10">@order.Customer?.FullName</dd> <!-- Показываем имя покупателя -->
+        </dl>
+        <EditForm method="post" Model="order" OnValidSubmit="DeleteOrder" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger" disabled="@(order is null)">Удалить</button> |
+            <a href="/orders">Возврат к списку заказов</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    Order? order;
+
+    [SupplyParameterFromQuery]
+    public int OrderId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        order = await context.Orders
+            .Include(o => o.Customer) // Включаем покупателя для отображения
+            .FirstOrDefaultAsync(m => m.OrderId == OrderId);
+
+        if (order is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    public async Task DeleteOrder()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Orders.Remove(order!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/orders");
+    }
+}

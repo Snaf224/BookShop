@@ -1,0 +1,42 @@
+﻿@page "/customers"
+
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using kurs.Models
+@inject IDbContextFactory<kurs.BooksDbContext> DbFactory
+@implements IAsyncDisposable
+
+<PageTitle>Список клиентов</PageTitle>
+
+<h1>Список клиентов</h1>
+
+<p>
+    <a href="customers/create">Добавить нового клиента</a>
+</p>
+<p>
+    <a href="books">Вернуться к списку книг</a>
+</p>
+
+<QuickGrid Class="table" Items="context.Customers">
+    <PropertyColumn Title="Фио клиента" Property="customer => customer.FullName" />
+    <PropertyColumn Title="Email" Property="customer => customer.Email" />
+    <PropertyColumn Title="Телефон" Property="customer => customer.PhoneNumber" />
+    <PropertyColumn Title="Адрес доставки" Property="customer => customer.ShippingAddress" />
+
+    <TemplateColumn Context="customer">
+        <a href="@($"customers/edit?customerid={customer.CustomerId}")">Редактировать</a> |
+        <a href="@($"customers/details?customerid={customer.CustomerId}")">Просмотр</a> |
+        <a href="@($"customers/delete?customerid={customer.CustomerId}")">Удалить</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    BooksDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

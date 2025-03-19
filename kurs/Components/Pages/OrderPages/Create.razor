@@ -1,0 +1,63 @@
+﻿@page "/orders/create"
+
+@using Microsoft.EntityFrameworkCore;
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Добавить новый заказ</PageTitle>
+
+<h1>Добавить новый заказ</h1>
+<hr />
+
+<div class="row">
+    <div class="col-md-6">
+        <EditForm method="post" Model="Order" OnValidSubmit="AddOrder" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="orderName" class="form-label">Название заказа:</label>
+                <InputText id="orderName" @bind-Value="Order.OrderName" class="form-control" />
+                <ValidationMessage For="() => Order.OrderName" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="orderDate" class="form-label">Дата заказа:</label>
+                <InputDate id="orderDate" @bind-Value="Order.OrderDate" class="form-control" />
+                <ValidationMessage For="() => Order.OrderDate" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="paymentMethod" class="form-label">Метод оплаты:</label>
+                <InputText id="paymentMethod" @bind-Value="Order.PaymentMethod" class="form-control" />
+                <ValidationMessage For="() => Order.PaymentMethod" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="customerId" class="form-label">Покупатель:</label>
+                <InputNumber id="customerId" @bind-Value="Order.CustomerId" class="form-control" />
+                <ValidationMessage For="() => Order.CustomerId" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Создать заказ</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/orders">Возврат к списку заказов</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Order Order { get; set; } = new();
+
+    private async Task AddOrder()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Orders.Add(Order);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/orders");
+    }
+}

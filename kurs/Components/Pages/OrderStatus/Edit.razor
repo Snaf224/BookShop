@@ -1,0 +1,107 @@
+﻿@page "/orderstatus/edit"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Редактировать статус заказа</PageTitle>
+
+<h1>Редактировать статус заказа</h1>
+
+<hr />
+@if (orderStatus is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="orderStatus" OnValidSubmit="UpdateOrderStatus" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="orderStatus.StatusId" value="@orderStatus.StatusId" />
+
+                <div class="mb-3">
+                    <label for="status" class="form-label">Статус заказа:</label>
+                    <InputText id="status" @bind-Value="orderStatus.Status" class="form-control" />
+                    <ValidationMessage For="() => orderStatus.Status" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="orderId" class="form-label">Идентификатор заказа:</label>
+                    <InputNumber id="orderId" @bind-Value="orderStatus.OrderId" class="form-control" />
+                    <ValidationMessage For="() => orderStatus.OrderId" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="trackingNumber" class="form-label">Номер отслеживания:</label>
+                    <InputText id="trackingNumber" @bind-Value="orderStatus.TrackingNumber" class="form-control" />
+                    <ValidationMessage For="() => orderStatus.TrackingNumber" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="dateUpdated" class="form-label">Дата обновления:</label>
+                    <InputDate id="dateUpdated" @bind-Value="orderStatus.DateUpdated" class="form-control" />
+                    <ValidationMessage For="() => orderStatus.DateUpdated" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/orderstatus">Возврат к списку статусов заказов</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int OrderStatusId { get; set; }
+
+    [SupplyParameterFromForm]
+    public OrderStatus? orderStatus { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        orderStatus ??= await context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusId == OrderStatusId);
+
+        if (orderStatus is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    public async Task UpdateOrderStatus()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(orderStatus!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!OrderStatusExists(orderStatus!.StatusId))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/orderstatus");
+    }
+
+    bool OrderStatusExists(int orderStatusId)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.OrderStatuses.Any(e => e.StatusId == orderStatusId);
+    }
+}

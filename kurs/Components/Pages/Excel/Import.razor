@@ -1,0 +1,294 @@
+﻿@page "/importexcel"
+
+@attribute [Authorize(Roles = "admin")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+
+
+@rendermode InteractiveServer
+@using ClosedXML.Excel
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@using Microsoft.AspNetCore.Components.Forms;
+
+<PageTitle>Загрузка файла Excel для импорта в базу данных</PageTitle>
+
+<p>
+    <label>
+        Укажите файл Excel для импорта:
+        <InputFile OnChange="LoadFiles" />
+    </label>
+</p>
+@if (isLoading)
+{
+    <p>Uploading...</p>
+}
+else
+{
+    <ul>
+        <div>Количество импортированных авторов: @authorList.Count()</div>
+        <div>Количество импортированных книг: @bookList.Count()</div>
+        <div>Количество импортированных клиентов: @customerList.Count()</div>
+        <div>Количество импортированных заказов: @orderList.Count()</div>
+        <div>Количество импортированных статусов заказов: @orderStatusList.Count()</div>
+
+        @if (StartTime != null)
+        {
+            TimeSpan ts = (EndTime ?? DateTime.Now).Subtract(StartTime ?? DateTime.Now);
+            <div>
+                Время выполнения: @String.Format("{0:00}:{1:00}", ts.Seconds, ts.Milliseconds / 10);
+            </div>
+        }
+    </ul>
+}
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div>Error: @ErrorMessage</div>
+}
+
+@code {
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    public string ErrorMessage { get; set; } = "";
+
+    DateTime? StartTime;
+    DateTime? EndTime;
+
+    public List<Author> authorList = new();
+    public List<Book> bookList = new();
+    public List<Customer> customerList = new();
+    public List<Order> orderList = new();
+    public List<OrderStatus> orderStatusList = new();
+
+    private bool isLoading;
+
+    string? errworksheet { get; set; } = "";
+    int? errindexrow { get; set; } = 0;
+    const int MAX_FILESIZE = 5000 * 1024; // 5 MB
+
+    private async Task LoadFiles(InputFileChangeEventArgs e)
+    {
+        isLoading = true;
+
+        var browserFile = e.File;
+
+        if (browserFile != null)
+        {
+            try
+            {
+                using (var fileStream = browserFile.OpenReadStream(MAX_FILESIZE)) // от утечек
+                {
+                    authorList = new();
+                    bookList = new();
+                    customerList = new();
+                    orderList = new();
+                    orderStatusList = new();
+
+                    var randomFile = Path.GetTempFileName();
+                    var extension = Path.GetExtension(browserFile.Name);
+                    var targetFilePath = Path.ChangeExtension(randomFile, extension);
+                    using (var destinationStream = new FileStream(targetFilePath, FileMode.Create))
+                    {
+                        await fileStream.CopyToAsync(destinationStream);
+                        StartTime = DateTime.Now;
+                        await GetDataTableFromExcelAsync(destinationStream);
+                        EndTime = DateTime.Now;
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                ErrorMessage = exception.Message;
+            }
+        }
+
+        isLoading = false;
+    }
+
+    public async Task GetDataTableFromExcelAsync(FileStream file)
+    {
+        using (var context = DbFactory.CreateDbContext())
+        {
+            using (XLWorkbook workbook = new XLWorkbook(file))
+            {
+                try
+                {
+                    foreach (IXLWorksheet worksheet in workbook.Worksheets)
+                    {
+                        errindexrow = 1;
+                        errworksheet = worksheet.Name;
+
+                        if (worksheet.Name == "Authors")
+                        {
+                            foreach (IXLRow row in worksheet.RowsUsed().Skip(1))
+                            {
+                                errindexrow++;
+                                Author author = new Author();
+                                var range = worksheet.RangeUsed();
+                                var table = range!.AsTable();
+
+                                //заполение свойств автора из таблицы
+                                author.AuthorId = int.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "AuthorId").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+                                author.Fio = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "Fio").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                author.Bio = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "Bio").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                author.Country = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "Country").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                author.DateOfBirth = DateTime.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "DateOfBirth").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+
+                                //добавление автора в список
+                                authorList.Add(author);
+                            }
+                        }
+
+                        errindexrow = 1;
+                        if (worksheet.Name == "Books")
+                        {
+                            foreach (IXLRow row in worksheet.RowsUsed().Skip(1))
+                            {
+                                errindexrow++;
+                                Book book = new Book();
+                                var range = worksheet.RangeUsed();
+                                var table = range!.AsTable();
+
+                                //заполение свойств книг из таблицы
+                                book.BookId = int.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "BookId").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+                                book.Title = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "Title").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                book.Price = decimal.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "Price").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+                                book.CountBooks = int.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "CountBooks").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+                                book.Description = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "Description").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                book.AuthorId = int.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "AuthorId").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+
+                                //добавление книги в список
+                                bookList.Add(book);
+                            }
+                        }
+
+                        errindexrow = 1;
+                        if (worksheet.Name == "Customers")
+                        {
+                            foreach (IXLRow row in worksheet.RowsUsed().Skip(1))
+                            {
+                                errindexrow++;
+                                Customer customer = new Customer();
+                                var range = worksheet.RangeUsed();
+                                var table = range!.AsTable();
+
+                                //добавление свойств клиента из таблицы
+                                customer.CustomerId = int.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "CustomerId").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+                                customer.FullName = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "FullName").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                customer.Email = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "Email").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                customer.ShippingAddress = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "ShippingAddress").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                customer.PhoneNumber = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "PhoneNumber").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+
+                                //добавление клиента в список
+                                customerList.Add(customer);
+                            }
+                        }
+
+                        errindexrow = 1;
+                        if (worksheet.Name == "Orders")
+                        {
+                            foreach (IXLRow row in worksheet.RowsUsed().Skip(1))
+                            {
+                                errindexrow++;
+                                Order order = new Order();
+                                var range = worksheet.RangeUsed();
+                                var table = range!.AsTable();
+
+                                //добавление свойств заказов из таблицы
+                                order.OrderId = int.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "OrderId").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+                                order.OrderName = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "OrderName").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                order.OrderDate = DateTime.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "OrderDate").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+                                order.PaymentMethod = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "PaymentMethod").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                order.CustomerId = int.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "CustomerId").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+
+                                //добавление заказа в список
+                                orderList.Add(order);
+                            }
+                        }
+
+                        errindexrow = 1;
+                        if (worksheet.Name == "OrderStatuses")
+                        {
+                            foreach (IXLRow row in worksheet.RowsUsed().Skip(1))
+                            {
+                                errindexrow++;
+                                OrderStatus orderStatus = new OrderStatus();
+                                var range = worksheet.RangeUsed();
+                                var table = range!.AsTable();
+
+                                //добавление свойств статуса заказы из таблицы
+                                orderStatus.StatusId = int.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "StatusId").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+                                orderStatus.Status = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "Status").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                orderStatus.DateUpdated = DateTime.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "DateUpdated").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+                                orderStatus.TrackingNumber = row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "TrackingNumber").RangeAddress.FirstAddress.ColumnNumber).Value.ToString();
+                                orderStatus.OrderId = int.Parse(row.Cell(table.FindColumn(c => c.FirstCell().Value.ToString() == "OrderId").RangeAddress.FirstAddress.ColumnNumber).Value.ToString());
+
+                                //добавление статуса заказа в список
+                                orderStatusList.Add(orderStatus);
+                            }
+                        }
+                    }
+
+                    errworksheet = "";
+
+                    //сброс значений первичного ключа
+                    foreach (var el in orderList)
+                    {
+                        el.OrderId = 0;
+                    }
+                    foreach (var el in authorList)
+                    {
+                        el.AuthorId = 0;
+                    }
+                    foreach (var el in bookList)
+                    {
+                        el.BookId = 0;
+                    }
+                    foreach (var el in customerList)
+                    {
+                        el.CustomerId = 0;
+                    }
+                    foreach (var el in orderStatusList)
+                    {
+                        el.StatusId = 0;
+                    }
+
+                    using (var tr = context.Database.BeginTransaction())
+                    {
+                        //добавление в бд
+                        context.AddRange(authorList);
+                        await context.SaveChangesAsync();
+
+                        context.AddRange(bookList);
+                        await context.SaveChangesAsync();
+
+                        context.AddRange(customerList);
+                        await context.SaveChangesAsync();
+
+                        context.AddRange(orderList);
+                        await context.SaveChangesAsync();
+
+                        context.AddRange(orderStatusList);
+                        await context.SaveChangesAsync();
+
+                        tr.Commit();
+                    }
+                }
+                catch (Exception exception)
+                {
+                    if (errworksheet != "")
+                        ErrorMessage = "Ошибка в импорте в таблице " + errworksheet + ", строка - " + errindexrow.ToString();
+                    ErrorMessage += "\n" + exception.Message;
+                    if (exception.InnerException != null)
+                        ErrorMessage += "\nInner Exception: " + exception.InnerException.Message;
+                }
+            }
+        }
+    }
+}

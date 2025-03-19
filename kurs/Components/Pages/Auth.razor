@@ -1,0 +1,37 @@
+﻿@page "/auth"
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using System.Security.Claims
+@using kurs.Models
+
+@inject UserManager<ApplicationUser> userManager
+@inject AuthenticationStateProvider authStateProvider
+
+@attribute [Authorize]
+
+<PageTitle>Auth</PageTitle>
+
+<h1>You are authenticated</h1>
+<h2>Your roles:</h2>
+@foreach(var role in _roles) {
+    <p>@role</p>
+}
+
+@code {
+    private ApplicationUser? _user;
+    private IList<string> _roles = [];
+
+    protected override async Task OnInitializedAsync() {
+        var authState = await authStateProvider.GetAuthenticationStateAsync();
+        var userClaims = authState.User;
+
+        if (userClaims.Identity is not null && userClaims.Identity.IsAuthenticated) {
+            var claims = userClaims.Claims;
+
+            _user = await userManager.FindByEmailAsync(userClaims.FindFirst(c => c.Type == ClaimTypes.Name)!.Value);
+            _roles = await userManager.GetRolesAsync(_user);
+        }
+    }
+}

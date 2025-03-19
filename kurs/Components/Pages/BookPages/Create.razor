@@ -1,0 +1,77 @@
+﻿@page "/books/create"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Добавить новую книгу</PageTitle>
+
+<h1>Добавить новую книгу</h1>
+
+<hr />
+<div class="row">
+    <div class="col-md-6">
+        <EditForm Model="Book" OnValidSubmit="AddBook" FormName="create">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="title" class="form-label">Название:</label>
+                <InputText id="title" @bind-Value="Book.Title" class="form-control" />
+                <ValidationMessage For="() => Book.Title" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="price" class="form-label">Цена:</label>
+                <!-- Указываем тип decimal через double -->
+                <InputNumber id="price" @bind-Value="Book.Price" class="form-control" />
+                <ValidationMessage For="() => Book.Price" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="countBooks" class="form-label">Книг в наличии:</label>
+                <InputNumber id="countBooks" @bind-Value="Book.CountBooks" class="form-control" />
+                <ValidationMessage For="() => Book.CountBooks" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">Описание:</label>
+                <InputText id="description" @bind-Value="Book.Description" class="form-control" />
+                <ValidationMessage For="() => Book.Description" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="AuthorId" class="form-label">Код автора:</label>
+                <InputNumber id="AuthorId" @bind-Value="Book.AuthorId" class="form-control" />
+                <ValidationMessage For="() => Book.AuthorId" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Создать</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/books">Возврат к списку книг</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public Book Book { get; set; } = new();
+    private List<Author> Authors { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Authors = await context.Authors.ToListAsync();
+    }
+
+    public async Task AddBook()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Books.Add(Book);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/books");
+    }
+}

@@ -1,0 +1,116 @@
+﻿@page "/books/edit"
+
+
+@using Microsoft.EntityFrameworkCore;
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Редактировать книгу</PageTitle>
+
+<h1>Редактировать книгу</h1>
+
+<hr />
+@if (book is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="book" OnValidSubmit="UpdateBook" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="book.BookId" value="@book.BookId" />
+
+                <div class="mb-3">
+                    <label for="title" class="form-label">Название:</label>
+                    <InputText id="title" @bind-Value="book.Title" class="form-control" />
+                    <ValidationMessage For="() => book.Title" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="price" class="form-label">Цена:</label>
+                    <InputNumber id="price" @bind-Value="book.Price" class="form-control" />
+                    <ValidationMessage For="() => book.Price" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="CountBooks" class="form-label">Книг в наличии:</label>
+                    <InputNumber id="CountBooks" @bind-Value="book.CountBooks" class="form-control" />
+                    <ValidationMessage For="() => book.CountBooks" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Описание:</label>
+                    <InputText id="description" @bind-Value="book.Description" class="form-control" />
+                    <ValidationMessage For="() => book.Description" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="AuthorId" class="form-label">Код автора:</label>
+                    <InputNumber id="AuthorId" @bind-Value="book.AuthorId" class="form-control" />
+                    <ValidationMessage For="() => book.AuthorId" class="text-danger" />
+                </div>
+
+                
+
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/books">Возврат к списку книг</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int BookId { get; set; }
+
+    [SupplyParameterFromForm]
+    public Book? book { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        book ??= await context.Books.FirstOrDefaultAsync(m => m.BookId == BookId);
+
+        if (book is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    public async Task UpdateBook()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(book!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!BookExists(book!.BookId))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/books");
+    }
+
+    bool BookExists(int bookId)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Books.Any(e => e.BookId == bookId);
+    }
+}

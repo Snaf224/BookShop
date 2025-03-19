@@ -1,0 +1,43 @@
+﻿@page "/books"
+
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore;
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Список книг</PageTitle>
+
+<h1>Список книг</h1>
+
+<p>
+    <a href="books/create">Добавить новую книгу</a>
+</p>
+
+<QuickGrid Class="table" Items="context.Books">
+    <PropertyColumn Title="Название" Property="book => book.Title" />
+    <PropertyColumn Title="Цена" Property="book => book.Price" />
+    <PropertyColumn Title="Книг в наличии" Property="book => book.CountBooks" />
+    <PropertyColumn Title="Описание" Property="book => book.Description" />
+    <PropertyColumn Title="Код автора" Property="book => book.AuthorId" />
+
+    <TemplateColumn Context="book">
+        <a href="@($"authors?bookid={book.BookId}")">Авторы</a> |
+        <a href="@($"customers?bookid={book.BookId}")">Клиенты</a> |
+        <a href="@($"orders?orderid={book.BookId}")">Заказы</a> |
+        <a href="@($"orderstatus?orderstatusid={book.BookId}")">Статус заказа</a> |
+        <a href="@($"books/details?bookid={book.BookId}")">Просмотр</a> |
+        <a href="@($"books/delete?bookid={book.BookId}")">Удалить</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    BooksDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

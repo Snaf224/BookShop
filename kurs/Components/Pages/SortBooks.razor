@@ -1,0 +1,112 @@
+﻿@* @page "/sortbooks"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+
+<PageTitle>Сортировка книг</PageTitle>
+
+<h1>Сортировка книг</h1>
+
+<!-- Выпадающий список для выбора порядка сортировки -->
+<p>
+    <label for="sortOrder">Выберите порядок сортировки по цене: </label>
+    <select id="sortOrder" @onchange="OnSortOrderChanged">
+        <option value="">-- Выберите порядок сортировки --</option>
+        <option value="asc">По возрастанию</option>
+        <option value="desc">По убыванию</option>
+    </select>
+</p>
+
+<!-- Таблица для отображения списка книг, она появляется только после выбора сортировки -->
+@if (books.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Цена</th>
+                <th>Книг в наличии</th>
+                <th>Описание</th>
+                <th>Код автора</th>
+                <th>Код клиента</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var book in books)
+            {
+                <tr>
+                    <td>@book.Title</td>
+                    <td>@book.Price</td>
+                    <td>@book.CountBooks</td>
+                    <td>@book.Description</td>
+                    <td>@book.AuthorId</td>
+                    <td>@book.CustomerId</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (isSortOrderSelected)
+{
+    <p>Нет книг для отображения.</p>
+}
+
+@code {
+    private BooksDbContext context = default!;
+    private List<Book> books = new();  // Храним все книги
+    private bool isSortOrderSelected = false;  // Флаг, показывающий, что выбран порядок сортировки
+    private string sortOrder = "";  // Изначально пусто, чтобы не подгружать книги сразу
+
+    // При инициализации страницы контекст создается
+    protected override async Task OnInitializedAsync()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    // Метод для загрузки книг из базы данных с учетом сортировки
+    private async Task LoadBooks()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(sortOrder))
+            {
+                books.Clear();  // Если порядок сортировки не выбран, очищаем список
+                return;
+            }
+
+            if (sortOrder == "desc")
+            {
+                // Сортировка по убыванию
+                books = await context.Books.OrderByDescending(b => b.Price).ToListAsync();
+            }
+            else if (sortOrder == "asc")
+            {
+                // Сортировка по возрастанию
+                books = await context.Books.OrderBy(b => b.Price).ToListAsync();
+            }
+
+            // Добавим вывод отладочной информации, чтобы увидеть количество загруженных книг
+            Console.WriteLine($"Загружено {books.Count} книг, сортировка: {sortOrder}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка при загрузке книг: {ex.Message}");
+        }
+
+        // Обновляем UI
+        StateHasChanged();
+    }
+
+    // Обработчик изменения порядка сортировки
+    private async Task OnSortOrderChanged(ChangeEventArgs e)
+    {
+        sortOrder = e.Value.ToString(); // Получаем выбранное значение
+        isSortOrderSelected = true;  // Устанавливаем флаг, что сортировка выбрана
+        await LoadBooks();  // Загружаем отсортированные книги
+    }
+
+    // Очистка контекста при завершении
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}
+ *@

@@ -1,0 +1,62 @@
+﻿@page "/orderstatus/delete"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Удалить статус заказа</PageTitle>
+
+<h1>Удалить статус заказа</h1>
+
+<h3>Вы уверены, что хотите удалить статус заказа?</h3>
+<div>
+    <hr />
+    @if (orderStatus is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-2">Статус заказа</dt>
+            <dd class="col-sm-10">@orderStatus.Status</dd>
+            <dt class="col-sm-2">Идентификатор заказа</dt>
+            <dd class="col-sm-10">@orderStatus.OrderId</dd>
+            <dt class="col-sm-2">Дата обновления</dt>
+            <dd class="col-sm-10">@orderStatus.DateUpdated.ToShortDateString()</dd>
+            <dt class="col-sm-2">Номер отслеживания</dt>
+            <dd class="col-sm-10">@orderStatus.TrackingNumber</dd>
+        </dl>
+        <EditForm method="post" Model="orderStatus" OnValidSubmit="DeleteOrderStatus" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger" disabled="@(orderStatus is null)">Удалить</button> |
+            <a href="/orderstatus">Возврат к списку статусов заказов</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    OrderStatus? orderStatus;
+
+    [SupplyParameterFromQuery]
+    public int OrderStatusId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        orderStatus = await context.OrderStatuses.FirstOrDefaultAsync(m => m.StatusId == OrderStatusId);
+
+        if (orderStatus is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    public async Task DeleteOrderStatus()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.OrderStatuses.Remove(orderStatus!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/orderstatus");
+    }
+}

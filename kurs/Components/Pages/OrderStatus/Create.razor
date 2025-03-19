@@ -1,0 +1,64 @@
+﻿@page "/orderstatus/create"
+
+@using Microsoft.EntityFrameworkCore;
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Добавить новый статус заказа</PageTitle>
+
+<h1>Добавить новый статус заказа</h1>
+
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="OrderStatus" OnValidSubmit="AddOrderStatus" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="status" class="form-label">Статус заказа:</label>
+                <InputText id="status" @bind-Value="OrderStatus.Status" class="form-control" />
+                <ValidationMessage For="() => OrderStatus.Status" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="orderId" class="form-label">Идентификатор заказа:</label>
+                <InputNumber id="orderId" @bind-Value="OrderStatus.OrderId" class="form-control" />
+                <ValidationMessage For="() => OrderStatus.OrderId" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="dateUpdated" class="form-label">Дата обновления:</label>
+                <InputDate id="dateUpdated" @bind-Value="OrderStatus.DateUpdated" class="form-control" />
+                <ValidationMessage For="() => OrderStatus.DateUpdated" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="trackingNumber" class="form-label">Номер отслеживания:</label>
+                <InputText id="trackingNumber" @bind-Value="OrderStatus.TrackingNumber" class="form-control" />
+                <ValidationMessage For="() => OrderStatus.TrackingNumber" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Создать</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/orderstatus">Возврат к списку статусов заказов</a>
+</div>
+
+@code {
+
+    [SupplyParameterFromForm]
+    public OrderStatus OrderStatus { get; set; } = new();
+
+    public async Task AddOrderStatus()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.OrderStatuses.Add(OrderStatus); // Добавляем новый статус заказа
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/orderstatus");
+    }
+}

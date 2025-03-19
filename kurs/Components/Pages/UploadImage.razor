@@ -1,0 +1,68 @@
+﻿@page "/uploadimage"
+@using Microsoft.AspNetCore.Components.Forms
+@using System.IO
+
+<h3>Загрузка изображения</h3>
+
+<div class="mb-3">
+    <InputFile OnChange="HandleFileSelected" multiple="false" />
+</div>
+
+@if (!string.IsNullOrEmpty(currentImageUrl))
+{
+    <div class="mb-3">
+        <img src="@currentImageUrl" style="max-width: 300px; max-height:300px" />
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(uploadStatus))
+{
+    <p>@uploadStatus</p>
+}
+
+@code {
+    private string? currentImageUrl;
+    private string? uploadStatus;
+    private IBrowserFile? file;
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        file = e.File;
+
+        if (file != null)
+        {
+            if (file.Size > 5* 1024 * 1024)
+        {
+                uploadStatus = "Размер файла превышает 5 МБ.";
+                currentImageUrl = null;
+                StateHasChanged();
+                return;
+            }
+
+            string fileExtension = Path.GetExtension(file.Name).ToLowerInvariant();
+
+            if (fileExtension != ".jpeg" && fileExtension != ".jpg")
+            {
+                uploadStatus = "Файл должен быть в формате JPEG.";
+                currentImageUrl = null;
+                StateHasChanged();
+                return;
+            }
+
+
+
+            using (var stream = file.OpenReadStream(5*1024*1024))
+            {
+                byte[] buffer = new byte[file.Size];
+                stream.Read(buffer, 0, (int)file.Size);
+
+                currentImageUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+                uploadStatus = "Изображение загружено";
+                StateHasChanged();
+            }
+
+
+        }
+
+    }
+}

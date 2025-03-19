@@ -1,0 +1,44 @@
+﻿@page "/authors"
+
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using kurs.Models
+@inject IDbContextFactory<kurs.BooksDbContext> DbFactory
+@implements IAsyncDisposable
+
+<PageTitle>Список авторов</PageTitle>
+
+<h1>Список авторов</h1>
+
+<p>
+    <a href="authors/create">Добавить нового автора</a>
+</p>
+<p>
+    <a href="books">Вернуться к списку книг</a>
+</p>
+
+<QuickGrid Class="table" Items="context.Authors">
+    <PropertyColumn Title="Фио автора" Property="author => author.Fio" />
+    <PropertyColumn Title="Биография" Property="author => author.Bio" />
+    <PropertyColumn Title="Страна" Property="author => author.Country" />
+    <PropertyColumn Title="Дата рождения" Property="author => author.DateOfBirth.ToShortDateString()" />
+
+
+
+    <TemplateColumn Context="author">
+        <a href="@($"authors/edit?authorid={author.AuthorId}")">Редактировать</a> |
+        <a href="@($"authors/details?authorid={author.AuthorId}")">Просмотр</a> |
+        <a href="@($"authors/delete?authorid={author.AuthorId}")">Удалить</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    BooksDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

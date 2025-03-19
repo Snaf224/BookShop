@@ -1,0 +1,96 @@
+﻿@page "/profile"
+
+@using kurs.Models
+@inject NavigationManager Navigation
+@inject IWebHostEnvironment env
+@inject BooksDbContext dbContext
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Профиль клиента</PageTitle>
+
+<h3>Профиль клиента</h3>
+
+<div style="display: flex; justify-content: space-between;">
+
+    <!-- Левая часть: Профиль клиента -->
+    <div style="flex: 1; margin-right: 30px;">
+        <!-- Статическое изображение профиля -->
+        <div style="margin-left: 50px;">
+            <img src="/uploads/профиль.jpg" alt="Profile Picture" style="width: 150px; height: 150px; border-radius: 50%;" />
+        </div>
+
+        <EditForm Model="@customer" OnValidSubmit="HandleValidSubmit" FormName="profileForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-group">
+                <label for="FullName">Фио</label>
+                <InputText id="FullName" class="form-control" @bind-Value="customer.FullName" style="width: 250px;" />
+            </div>
+
+            <div class="form-group">
+                <label for="Email">Email</label>
+                <InputText id="Email" class="form-control" @bind-Value="customer.Email" style="width: 250px;" />
+            </div>
+
+            <div class="form-group">
+                <label for="ShippingAddress">Адрес доставки</label>
+                <InputText id="ShippingAddress" class="form-control" @bind-Value="customer.ShippingAddress" style="width: 250px;" />
+            </div>
+
+            <div class="form-group">
+                <label for="PhoneNumber">Номер телефона</label>
+                <InputText id="PhoneNumber" class="form-control" @bind-Value="customer.PhoneNumber" style="width: 250px;" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+        </EditForm>
+    </div>
+
+    <!-- Правая часть: Выпадающий список для выбора клиента -->
+    <div style="flex: 1;">
+        <div class="mb-3">
+            <label for="customerSelect">Список всех клиентов:</label>
+            <select id="customerSelect" @bind="SelectedCustomerId" class="form-control">
+                <option value="">Посмотреть клиента</option>
+                @foreach (var customer in Customers)
+                {
+                    <option value="@customer.CustomerId">@customer.FullName</option>
+                }
+            </select>
+        </div>
+
+        @if (SelectedCustomerId > 0)
+        {
+            <p>Вы выбрали клиента с ID: @SelectedCustomerId</p>
+        }
+        else
+        {
+           // <p>Выберите клиента для просмотра.</p>
+        }
+    </div>
+</div>
+
+@code {
+    private Customer customer = new Customer
+        {
+            FullName = "Зотиков Л.В.",
+            Email = "leon21@mail.ru",
+            ShippingAddress = "г.Чебоксары, Юности 3",
+            PhoneNumber = "880055553535"
+        };
+
+    private List<Customer> Customers { get; set; } = new();
+    private int SelectedCustomerId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Загружаем всех клиентов для выпадающего списка
+        Customers = await dbContext.Customers.ToListAsync();
+    }
+
+    private void HandleValidSubmit()
+    {
+        Console.WriteLine($"Profile updated: {customer.FullName}, {customer.Email}, {customer.ShippingAddress}, {customer.PhoneNumber}");
+    }
+}

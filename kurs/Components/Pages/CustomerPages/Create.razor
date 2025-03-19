@@ -1,0 +1,63 @@
+﻿@page "/customers/create"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Добавить нового клиента</PageTitle>
+
+<h1>Добавить нового клиента</h1>
+
+<hr />
+<div class="row">
+    <div class="col-md-6">
+        <EditForm Model="Customer" OnValidSubmit="AddCustomer" FormName="create">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="fullName" class="form-label">ФИО:</label>
+                <InputText id="fullName" @bind-Value="Customer.FullName" class="form-control" />
+                <ValidationMessage For="() => Customer.FullName" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email:</label>
+                <InputText id="email" @bind-Value="Customer.Email" class="form-control" />
+                <ValidationMessage For="() => Customer.Email" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="shippingAddress" class="form-label">Адрес доставки:</label>
+                <InputText id="shippingAddress" @bind-Value="Customer.ShippingAddress" class="form-control" />
+                <ValidationMessage For="() => Customer.ShippingAddress" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="phoneNumber" class="form-label">Номер телефона:</label>
+                <InputText id="phoneNumber" @bind-Value="Customer.PhoneNumber" class="form-control" />
+                <ValidationMessage For="() => Customer.PhoneNumber" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Создать</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/customers">Возврат к списку клиентов</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    public Customer Customer { get; set; } = new();
+
+    public async Task AddCustomer()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Customers.Add(Customer);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/customers");
+    }
+}

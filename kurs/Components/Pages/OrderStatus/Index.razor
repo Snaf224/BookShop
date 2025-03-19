@@ -1,0 +1,42 @@
+﻿@page "/orderstatus"
+
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using kurs.Models
+@inject IDbContextFactory<kurs.BooksDbContext> DbFactory
+@implements IAsyncDisposable
+
+<PageTitle>Список статусов заказов</PageTitle>
+
+<h1>Список статусов заказов</h1>
+
+<p>
+    <a href="orderstatus/create">Добавить новый статус заказа</a>
+</p>
+<p>
+    <a href="books">Вернуться к списку книг</a>
+</p>
+
+<QuickGrid Class="table" Items="context.OrderStatuses">
+    <PropertyColumn Title="Статус заказа" Property="orderStatus => orderStatus.Status" />
+    <PropertyColumn Title="Идентификатор заказа" Property="orderStatus => orderStatus.OrderId" />
+    <PropertyColumn Title="Номер отслеживания" Property="orderStatus => orderStatus.TrackingNumber" />
+    <PropertyColumn Title="Дата обновления" Property="orderStatus => orderStatus.DateUpdated.ToShortDateString()" />
+
+    <TemplateColumn Context="orderStatus">
+        <a href="@($"orderstatus/edit?orderStatusId={orderStatus.StatusId}")">Редактировать</a> |
+        <a href="@($"orderstatus/details?orderStatusId={orderStatus.StatusId}")">Просмотр</a> |
+        <a href="@($"orderstatus/delete?orderStatusId={orderStatus.StatusId}")">Удалить</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    BooksDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

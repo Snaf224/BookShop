@@ -1,0 +1,53 @@
+﻿@page "/authors/details"
+
+@using Microsoft.EntityFrameworkCore
+@using kurs.Models
+@inject IDbContextFactory<BooksDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Просмотр автора</PageTitle>
+
+<h1>Просмотр автора</h1>
+
+<div>
+    <hr />
+    @if (author is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-2">ФИО автора</dt>
+            <dd class="col-sm-10">@author.Fio</dd>
+            <dt class="col-sm-2">Биография</dt>
+            <dd class="col-sm-10">@author.Bio</dd>
+            <dt class="col-sm-2">Страна</dt>
+            <dd class="col-sm-10">@author.Country</dd>
+            <dt class="col-sm-2">Дата рождения</dt>
+            <dd class="col-sm-10">@author.DateOfBirth.ToShortDateString()</dd>
+        </dl>
+        <div>
+            <a href="@($"/authors/edit?authorid={author.AuthorId}")">Редактировать</a> |
+            <a href="@($"/authors")">Возврат к списку авторов</a>
+        </div>
+    }
+</div>
+
+@code {
+    Author? author;
+
+    [SupplyParameterFromQuery]
+    public int AuthorId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        author = await context.Authors.FirstOrDefaultAsync(m => m.AuthorId == AuthorId);
+
+        if (author is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}
